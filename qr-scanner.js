@@ -70,15 +70,49 @@ angular.module('qrScanner', ["ng"]).directive('qrScanner', ['$interval', '$windo
         scope.ngSuccess({data: data});
       };
 
-      element.bind('$destroy', function() {
-        if ($window.localMediaStream) {
-          $window.localMediaStream.stop();
-        }
+      element.bind('$destroy', function () {
+        stopMediaStream($window.localMediaStream);
+        // if ($window.localMediaStream) {
+        //   $window.localMediaStream.stop();
+        // }
         if (stopScan) {
           $interval.cancel(stopScan);
         }
+
       });
+
+      var stopMediaStream = function (mediaStream) {
+        if (!mediaStream) throw 'MediaStream argument is mandatory.';
+
+        // Latest firefox does support mediaStream.getAudioTrack but doesn't support stop on MediaStreamTrack
+        var checkForMediaStreamTrackStop = Boolean(
+          (mediaStream.getAudioTracks || mediaStream.getVideoTracks) && (
+            (mediaStream.getAudioTracks()[0] && !mediaStream.getAudioTracks()[0].stop) ||
+            (mediaStream.getVideoTracks()[0] && !mediaStream.getVideoTracks()[0].stop)
+          )
+        );
+
+        if (!mediaStream.getAudioTracks || checkForMediaStreamTrackStop) {
+          if (mediaStream.stop) {
+            mediaStream.stop();
+          }
+          return;
+        }
+
+        if (mediaStream.getAudioTracks().length && mediaStream.getAudioTracks()[0].stop) {
+          mediaStream.getAudioTracks().forEach(function (track) {
+            track.stop();
+          });
+        }
+
+        if (mediaStream.getVideoTracks().length && mediaStream.getVideoTracks()[0].stop) {
+          mediaStream.getVideoTracks().forEach(function (track) {
+            track.stop();
+          });
+        }
+      };
     }
   }
 }]);
 })();
+
